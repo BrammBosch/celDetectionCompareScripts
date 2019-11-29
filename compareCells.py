@@ -4,6 +4,7 @@ import os
 import math
 import matplotlib.pyplot as plt
 import mplcursors
+import numpy as np
 
 from matplotlib.patches import Patch
 from matplotlib.lines import Line2D
@@ -11,6 +12,13 @@ from matplotlib.lines import Line2D
 
 def main():
     versionList = ['66632', '66633', '66634', '190925']
+
+    for version in versionList:
+
+
+        clearFile = open("/home/bram/Desktop/Jaar_3/donders/report/verslagData/detectedCells/allDistances"+ version + ".txt", "w+")
+        clearFile.write('')
+        clearFile.close()
 
     pool = multiprocessing.Pool()
     pool.map(callFunc, versionList)
@@ -91,7 +99,6 @@ def makeGraph(dictPipeline, counted, version, variatie, listCounted):
     for key in dictPipeline:
         listDataTemp, x, y = func(key, listCounted, variatie, counted)
         data.append(listDataTemp)
-        # if not (x - counted) > 100 and not (y -counted) >100:
         listX.append(x)
         listY.append(y)
         key[0] = key[0].replace('_', ' ').replace('.csv', '')
@@ -115,7 +122,7 @@ def makeGraph(dictPipeline, counted, version, variatie, listCounted):
     fig.suptitle('', fontsize=14, fontweight='bold')
 
     ax = fig.add_subplot()
-    ax.set_title('Pipeline results for ' + version)
+    ax.set_title('Pipeline results for ' + version + ' with ' + str(counted) + ' manual counts.')
     ax.set_xlabel('Pipeline counts')
     ax.set_ylabel('Matches')
     box = ax.get_position()
@@ -142,26 +149,31 @@ def makeGraph(dictPipeline, counted, version, variatie, listCounted):
 
     i = 0
     colorList = []
+    allList = []
     for z in listX:
         dist = math.sqrt((listX[i] - counted) ** 2 + (listY[i] - counted) ** 2)
         dist = truncate(dist)
-        print(listLabel[i])
+        listFilters = listLabel[i].split(' ')
 
-        if 'backgroundCor' in listLabel[i]:
-            color = 'r'
-            name = 'background correction'
-        elif 'denoise' in listLabel[i]:
-            color = 'b'
-            name = 'denoising filter'
-        elif 'enhance' in listLabel[i]:
-            color = 'c'
-            name = 'enhancement filter'
-        elif 'particleEnhance' in listLabel[i]:
-            color = 'g'
-            name = 'particle enhancement filter'
-        elif 'morphology' in listLabel[i]:
-            color = 'm'
-            name = 'morphology filter'
+        allList.append([listFilters,dist])
+        color = 'k'
+        name = 'Test'
+        if len(listFilters) > 2:
+            if 'backgroundCor' in listFilters[2]:
+                color = 'r'
+                name = 'background correction'
+            elif 'denoise' in listFilters[2]:
+                color = 'b'
+                name = 'denoising filter'
+            elif 'enhance' in listFilters[2]:
+                color = 'c'
+                name = 'enhancement filter'
+            elif 'particleEnhance' in listFilters[2]:
+                color = 'g'
+                name = 'particle enhancement filter'
+            elif 'morphology' in listFilters[2]:
+                color = 'm'
+                name = 'morphology filter'
         else:
             color = 'k'
             name = 'no filter'
@@ -172,7 +184,7 @@ def makeGraph(dictPipeline, counted, version, variatie, listCounted):
 
 
         if 'machineLearn' in listLabel[i]:
-            #point += ax.plot(listX[i], listY[i], 'o' + color,
+            # point += ax.plot(listX[i], listY[i], 'o' + color,
             point += ax.plot(listX[i], listY[i], 'o' + color,
                              label=listLabel[i] + '\nmatches(y) = ' + str(listY[i]) + '\nCounts in program(x) = ' + str(
                                  listX[i]) + '\nDistance to perfect = ' + str(dist))
@@ -188,10 +200,11 @@ def makeGraph(dictPipeline, counted, version, variatie, listCounted):
                              label=listLabel[i] + '\nmatches(y) = ' + str(listY[i]) + '\nCounts in program(x) = ' + str(
                                  listX[i]) + '\nDistance to perfect = ' + str(dist))
 
-
         i += 1
     ax.legend(loc='center left', bbox_to_anchor=(1, 0.5), handles=legend_elements)
     mplcursors.cursor(point, hover=True).connect("add", lambda sel: sel.annotation.set_text(sel.artist.get_label()))
+
+    writeList(allList,version)
 
     plt.show()
 
@@ -201,12 +214,17 @@ def truncate(n):
 
 
 def makeCSV(data):
-
     version = data[0]
     del data[0]
     with open('/home/bram/Desktop/Jaar_3/donders/report/celDetectionCsv/' + version + '.csv', 'w+') as file:
         writer = csv.writer(file)
         writer.writerows(data)
 
+def writeList(allList,version):
+
+    f = open("/home/bram/Desktop/Jaar_3/donders/report/verslagData/detectedCells/allDistances"+version + ".txt", "a")
+
+    f.write(str(allList))
+    f.close()
 
 main()
