@@ -11,12 +11,11 @@ from matplotlib.lines import Line2D
 
 
 def main():
-    versionList = ['66632', '66633', '66634', '190925']
+    versionList = ['66632', '66633','66634', '190925']
 
     for version in versionList:
-
-
-        clearFile = open("/home/bram/Desktop/Jaar_3/donders/report/verslagData/detectedCells/allDistances"+ version + ".txt", "w+")
+        clearFile = open(
+            "/home/bram/Desktop/Jaar_3/donders/report/verslagData/detectedCells/allDistances" + version + ".txt", "w+")
         clearFile.write('')
         clearFile.close()
 
@@ -26,8 +25,14 @@ def main():
 
 def callFunc(version):
     variatie = 4
+    includeOutliers = True
+
     dictPipeline = []
-    path = '/home/bram/Desktop/Jaar_3/donders/report/verslagData/detectedCells/' + version + '/'
+
+    path = '/home/bram/Desktop/Jaar_3/donders/report/verslagData/detectedCells/' + version + '(20 < voxelCount < 100)/'
+    #path = '/home/bram/Desktop/Jaar_3/donders/report/verslagData/detectedCells/' + version + '/'
+
+
     for filename in os.listdir(path):
         with open(path + filename) as f:
             listPipeline = list(csv.reader(f))
@@ -41,7 +46,7 @@ def callFunc(version):
 
     counted = len(listCounted) + 1
 
-    makeGraph(dictPipeline, counted, version, variatie, listCounted)
+    makeGraph(dictPipeline, counted, version, variatie, listCounted, includeOutliers)
 
 
 def func(key, listCounted, variatie, counted):
@@ -63,17 +68,19 @@ def func(key, listCounted, variatie, counted):
                         # print('match ' + coord[0] + '-' + pipelineCoord[0] + '    ' + coord[1] + '-' + pipelineCoord[1] + '    ' + coord[2] + '-' + pipelineCoord[2])
                         i += 1
                         # print('match ' + pipelineCoord[0] + ' ' + pipelineCoord[1] + ' ' + pipelineCoord[2])
+                        break
         a += 1
+
 
     x = arivis
     y = i
     # print(x, y)
-    print('\n\n' + key[0])
-    print('Manual counts: ' + str(counted))
-    print('pipeline counts: ' + str(arivis))
-    print('Matches: ' + str(i))
-    print('Cells not matched: ' + str(counted - i))
-    print('Cells too many: ' + str(arivis - counted))
+    # print('\n\n' + key[0])
+    # print('Manual counts: ' + str(counted))
+    # print('pipeline counts: ' + str(arivis))
+    # print('Matches: ' + str(i))
+    # print('Cells not matched: ' + str(counted - i))
+    # print('Cells too many: ' + str(arivis - counted))
 
     # listDataTemp = []
     versionAndFilter = key[0].replace('.csv', '').split('_')
@@ -84,10 +91,10 @@ def func(key, listCounted, variatie, counted):
     else:
         listDataTemp = (versionAndFilter[1], 'None', arivis, i, str(counted - i), arivis - counted)
 
-    return listDataTemp, x, y
+    return listDataTemp, x, y, arivis
 
 
-def makeGraph(dictPipeline, counted, version, variatie, listCounted):
+def makeGraph(dictPipeline, counted, version, variatie, listCounted, outliers):
     listX = []
     listY = []
     listLabel = []
@@ -97,12 +104,21 @@ def makeGraph(dictPipeline, counted, version, variatie, listCounted):
     data.append(version)
     data.append(headers)
     for key in dictPipeline:
-        listDataTemp, x, y = func(key, listCounted, variatie, counted)
+        listDataTemp, x, y, arivis = func(key, listCounted, variatie, counted)
+        #print(listDataTemp)
         data.append(listDataTemp)
-        listX.append(x)
-        listY.append(y)
-        key[0] = key[0].replace('_', ' ').replace('.csv', '')
-        listLabel.append(key[0])
+        dist = math.sqrt((x - counted) ** 2 + (y - counted) ** 2)
+        if not outliers and dist < 600:
+            listX.append(x)
+            listY.append(y)
+            key[0] = key[0].replace('_', ' ').replace('.csv', '')
+            listLabel.append(key[0])
+
+        elif outliers:
+            listX.append(x)
+            listY.append(y)
+            key[0] = key[0].replace('_', ' ').replace('.csv', '')
+            listLabel.append(key[0])
 
     makeCSV(data)
     refpoint = [counted]
@@ -139,9 +155,9 @@ def makeGraph(dictPipeline, counted, version, variatie, listCounted):
     xSizeL = plt.xlim()[0]
     xSizeR = plt.xlim()[1]
 
-    listCoord1 = [0, plt.ylim()[1]]
+    listCoord1 = [0, refpoint2[0]]
     listCoord2 = listCoord1
-    # ax.plot(listCoord1, listCoord2, 'g-', label='Perfect matches line')
+    ax.plot(listCoord1, listCoord2, 'g-', label='Perfect matches line')
     plt.fill([counted, xSizeL, xSizeL, counted], [counted, counted, ySizeD, ySizeD], 'b', alpha=0.2, edgecolor='r')
     plt.fill([counted, xSizeR, xSizeR, counted], [counted, counted, ySizeU, ySizeU], 'cyan', alpha=0.2, edgecolor='r')
     plt.fill([counted, xSizeL, xSizeL, counted], [counted, counted, ySizeU, ySizeU], 'r', alpha=0.2, edgecolor='r')
@@ -154,34 +170,26 @@ def makeGraph(dictPipeline, counted, version, variatie, listCounted):
         dist = math.sqrt((listX[i] - counted) ** 2 + (listY[i] - counted) ** 2)
         dist = truncate(dist)
         listFilters = listLabel[i].split(' ')
+        match = listY[i]
+        total = listX[i]
+        if match > total:
+            match = total - (match - total)
+        try:
+            allList.append([listFilters, dist, match/total,listX[i]])
+        except ZeroDivisionError:
+            allList.append([listFilters, dist, 0,listX[i]])
 
-        allList.append([listFilters,dist])
-        color = 'k'
-        name = 'Test'
-        if len(listFilters) > 2:
-            if 'backgroundCor' in listFilters[2]:
-                color = 'r'
-                name = 'background correction'
-            elif 'denoise' in listFilters[2]:
-                color = 'b'
-                name = 'denoising filter'
-            elif 'enhance' in listFilters[2]:
-                color = 'c'
-                name = 'enhancement filter'
-            elif 'particleEnhance' in listFilters[2]:
-                color = 'g'
-                name = 'particle enhancement filter'
-            elif 'morphology' in listFilters[2]:
-                color = 'm'
-                name = 'morphology filter'
-        else:
-            color = 'k'
-            name = 'no filter'
+
+        keyWord = 'denoise'
+        #color, name  = colorFilter(listFilters, keyWord)
+        color, name = colorFirstFilter(listFilters)
+
+            
+
 
         if color not in colorList:
             legend_elements.append(Line2D([], [], marker='o', color=color, label=name, linestyle='None'))
         colorList.append(color)
-
 
         if 'machineLearn' in listLabel[i]:
             # point += ax.plot(listX[i], listY[i], 'o' + color,
@@ -204,7 +212,7 @@ def makeGraph(dictPipeline, counted, version, variatie, listCounted):
     ax.legend(loc='center left', bbox_to_anchor=(1, 0.5), handles=legend_elements)
     mplcursors.cursor(point, hover=True).connect("add", lambda sel: sel.annotation.set_text(sel.artist.get_label()))
 
-    writeList(allList,version)
+    writeList(allList, version)
 
     plt.show()
 
@@ -220,11 +228,55 @@ def makeCSV(data):
         writer = csv.writer(file)
         writer.writerows(data)
 
-def writeList(allList,version):
 
-    f = open("/home/bram/Desktop/Jaar_3/donders/report/verslagData/detectedCells/allDistances"+version + ".txt", "a")
+def writeList(allList, version):
+    f = open("/home/bram/Desktop/Jaar_3/donders/report/verslagData/detectedCells/allDistances" + version + ".txt", "a")
 
     f.write(str(allList))
     f.close()
 
+def colorFilter(listFilters,keyWord):
+    if len(listFilters) > 3:
+        if keyWord in listFilters[2] or keyWord in listFilters[3]:
+            color = 'b'
+            name = keyWord
+        else:
+            color = 'k'
+            name = 'else'
+    elif len(listFilters) > 2:
+        if keyWord in listFilters[2]:
+            color = 'b'
+            name = keyWord
+        else:
+            color = 'k'
+            name = 'else'
+    else:
+        color = 'k'
+        name = 'else'
+    return color, name
+def colorFirstFilter(listFilters):
+
+    if len(listFilters) > 2:
+        if 'backgroundCor' in listFilters[2]:
+            color = 'r'
+            name = 'background correction'
+        elif 'denoise' in listFilters[2]:
+            color = 'b'
+            name = 'denoising filter'
+        elif 'enhance' in listFilters[2]:
+            color = 'c'
+            name = 'enhancement filter'
+        elif 'particleEnhance' in listFilters[2]:
+            color = 'g'
+            name = 'particle enhancement filter'
+        elif 'morphology' in listFilters[2]:
+            color = 'm'
+            name = 'morphology filter'
+        else:
+            color = 'k'
+            name = 'no filter'
+    else:
+        color = 'k'
+        name = 'no filter'
+    return color, name
 main()
