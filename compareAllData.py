@@ -4,14 +4,16 @@ import mplcursors
 from matplotlib.patches import Patch
 from matplotlib.lines import Line2D
 import statistics
+import numpy as np
 
 plt.rcdefaults()
-import numpy as np
-import matplotlib.pyplot as plt
-import multiprocessing
 
 
 def main():
+    '''
+    In this function the datasets are read from local files and stored in list variables
+    :return:
+    '''
     versionList = ['66632', '66633', '66634', '190925']
     for version in versionList:
         f = open("/home/bram/Desktop/Jaar_3/donders/report/verslagData/detectedCells/allDistances" + version + ".txt",
@@ -51,54 +53,59 @@ def main():
     percentageToCount(totalList)
 
 
-# print(allCombinations)
-# print(combinationValues)
-
 def sortSecond(val):
+    '''
+    A function used to sort on an index in a list.
+    :param val: return the value to sort on
+    :return:
+    '''
     return val[1]
 
 
-# list1 to demonstrate the use of sorting
-# using using second key
-
-# sorts the array in ascending according to
-# second element
 def percentageToCount(totalList):
+    '''
+    This function creates a scatterplot where the percentage of correct counts is compared against the percentage of
+    cells found.
+    :param totalList: a list containing all values for the datasets.
+    :return:
+    '''
     fig = plt.figure()
     fig.suptitle('', fontsize=14, fontweight='bold')
 
     ax = fig.add_subplot()
-    ax.set_title('percentage count ratio')
-    ax.set_xlabel('percentage of cells found')
+    ax.set_title('Amount of cells found with percentage that matches')
+    ax.set_xlabel('percentage of cells')
     ax.set_ylabel('percentage correct')
     listX = []
     listY = []
     listFilters = []
     for item in totalList:
-        listY.append(item[3])
-        listX.append(item[4])
+        listY.append(item[3] * 100)
+        listX.append(item[4] * 100)
         listFilters.append(item[0])
 
     box = ax.get_position()
     ax.set_position([box.x0, box.y0, box.width * 0.8, box.height])
-    legend_elements = [Patch(facecolor='b', edgecolor='r', alpha=0.2, label=''),
-                       Patch(facecolor='y', edgecolor='r', alpha=0.2, label=''),
-                       Patch(facecolor='cyan', edgecolor='r', alpha=0.2, label=''),
-                       Patch(facecolor='r', edgecolor='r', alpha=0.2, label=''),
-                       Line2D([], [], marker='*', color='k', label='ClearMap', linestyle='None'),
-                       Line2D([], [], marker='o', color='k', label='Machine learning', linestyle='None'),
-                       Line2D([], [], marker='s', color='k', label='Blobfinder', linestyle='None')]
+    legend_elements = [  # Patch(facecolor='b', edgecolor='r', alpha=0.2, label='Not all cells were found'),
+        # Patch(facecolor='y', edgecolor='r', alpha=0.2, label='More cells are detected than are present in the dataset'),
+        # Patch(facecolor='cyan', edgecolor='r', alpha=0.2, label=''),
+        # Patch(facecolor='r', edgecolor='r', alpha=0.2, label=''),
+        Line2D([], [], marker='*', color='w', label='ClearMap', linestyle='None', mec='k'),
+        Line2D([], [], marker='o', color='w', label='Machine learning', linestyle='None', mec='k'),
+        Line2D([], [], marker='s', color='w', label='Blobfinder', linestyle='None', mec='k')]
 
-
-    point = ax.plot(1, 1, 'go',
-                    label='Perfect data\nx = ' + str(1) + '\ny = ' + str(1))
+    point = ax.plot(100, 100, 'go', label='Perfect data\nx = ' + str(100) + '\ny = ' + str(100))
 
     i = 0
     colorList = []
 
     for z in listX:
         filter = ast.literal_eval(listFilters[i])
-        color, name = colorFirstFilter(filter)
+
+        keyWord = 'particle'
+        color, name = colorFilter(filter, keyWord)
+
+        # color, name = colorFirstFilter(filter)
 
         if color not in colorList:
             legend_elements.append(Line2D([], [], marker='o', color=color, label=name, linestyle='None'))
@@ -107,48 +114,42 @@ def percentageToCount(totalList):
         if 'machineLearn' in filter[0]:
             point += ax.plot(listX[i], listY[i], 'o' + color,
                              label=totalList[i][0] + '\nAverage percentage correct = ' + str(
-                                 "{:.1f}".format(listY[i]*100)) + '%\nAverage amount of cells found = ' + str(
-                                 "{:.1f}".format(listX[i]*100)) + '%')
+                                 "{:.1f}".format(listY[i])) + '%\nAverage amount of cells found = ' + str(
+                                 "{:.1f}".format(listX[i])) + '%')
         elif 'blobFinder' in filter[0]:
             point += ax.plot(listX[i], listY[i], 's' + color,
                              label=totalList[i][0] + '\nAverage percentage correct = ' + str(
-                                 "{:.1f}".format(listY[i] * 100)) + '%\nAverage amount of cells found = ' + str(
-                                 "{:.1f}".format(listX[i]*100)) + '%')
+                                 "{:.1f}".format(listY[i])) + '%\nAverage amount of cells found = ' + str(
+                                 "{:.1f}".format(listX[i])) + '%')
         else:
             point += ax.plot(listX[i], listY[i], '*' + color,
                              label=totalList[i][0] + '\nAverage percentage correct = ' + str(
-                                 "{:.1f}".format(listY[i]*100)) + '%\nAverage amount of cells found = ' + str(
-                                 "{:.1f}".format(listX[i]*100)) + '%')
+                                 "{:.1f}".format(listY[i])) + '%\nAverage amount of cells found = ' + str(
+                                 "{:.1f}".format(listX[i])) + '%')
         i += 1
 
-    ySizeD = plt.ylim()[0]
-    ySizeU = plt.ylim()[1]
-
-    xSizeL = plt.xlim()[0]
-    xSizeR = plt.xlim()[1]
-
-    squares = 1
-    # squares2 = 657
-
-    plt.fill([squares, xSizeL, xSizeL, squares], [squares, squares, ySizeD, ySizeD], 'b', alpha=0.2, edgecolor='r')
-    plt.fill([squares, xSizeR, xSizeR, squares], [squares, squares, ySizeU, ySizeU], 'cyan', alpha=0.2, edgecolor='r')
-    plt.fill([squares, xSizeL, xSizeL, squares], [squares, squares, ySizeU, ySizeU], 'r', alpha=0.2, edgecolor='r')
-    plt.fill([squares, xSizeR, xSizeR, squares], [squares, squares, ySizeD, ySizeD], 'y', alpha=0.2, edgecolor='r')
+    ax.plot([0, 100], [100, 100], 'g--', label='Divide matches')
+    ax.plot([100, 100], [100, 0], 'g--', label='Divide matches')
 
     mplcursors.cursor(point, hover=True).connect("add", lambda sel: sel.annotation.set_text(sel.artist.get_label()))
 
     ax.legend(loc='center left', bbox_to_anchor=(1, 0.5), handles=legend_elements)
-
+    ax.set_ylim(ymin=0)
     plt.show()
 
 
 def makeGraph(totalList):
+    '''
+    This function creates a bar plot to compare the distances in the perfect point plotted in the datasets for each
+    pipelines.
+    :param totalList: a list containing all values for the datasets.
+    :return:
+    '''
     allCombinationsList = []
     allCombinations = []
     sdList = []
     combinationValues = []
     totalList.sort(key=sortSecond)
-    # print(totalList)
 
     for value in totalList:
         allCombinations.append(value[0].replace("'", "").replace('[', '').replace(']', ''))
@@ -164,7 +165,6 @@ def makeGraph(totalList):
                        Patch(facecolor='k', alpha=0.5, label='ClearMap'), ]
     i = 0
     for item in allCombinationsList:
-        # print(item[0])
         if item[0] == 'machineLearn':
 
             plt.barh(y_pos[i], performance[i], align='center', alpha=0.5, color='blue', xerr=sdList[i])
@@ -178,7 +178,7 @@ def makeGraph(totalList):
 
     plt.yticks(y_pos, objects, fontsize=8)
     plt.xlabel('Distance to the perfect score')
-    plt.title('Combination of the results from 4 datasets')
+    plt.title('Distance to the perfect score in all datasets combined with standard deviation')
     for i, v in enumerate(combinationValues):
         plt.text(v + sdList[i], i - .4, str(v), color='black', fontsize=8)
     plt.subplots_adjust(left=0.3, right=0.9, top=0.9, bottom=0.2)
@@ -188,15 +188,21 @@ def makeGraph(totalList):
 
 
 def colorFilter(listFilters, keyWord):
-    if len(listFilters) > 3:
-        if keyWord in listFilters[2] or keyWord in listFilters[3]:
+    '''
+    This filter is used to give pipelines using a certain keyword a color value in the plots.
+    :param listFilters: The list of filters used in the pipeline.
+    :param keyWord: A string with a keyword which should be given the color blue in the plot.
+    :return:
+    '''
+    if len(listFilters) > 2:
+        if keyWord in listFilters[2] or keyWord in listFilters[1]:
             color = 'b'
             name = keyWord
         else:
             color = 'k'
             name = 'else'
-    elif len(listFilters) > 2:
-        if keyWord in listFilters[2]:
+    elif len(listFilters) > 1:
+        if keyWord in listFilters[1]:
             color = 'b'
             name = keyWord
         else:
@@ -209,9 +215,12 @@ def colorFilter(listFilters, keyWord):
 
 
 def colorFirstFilter(listFilters):
-    print(listFilters)
-    if len(listFilters) >= 2:
-        print(listFilters[1])
+    '''
+    This function is used to color the results based on the first filter used in the pipelines.
+    :param listFilters: A list of filters used in the pipelines.
+    :return:
+    '''
+    if len(listFilters) > 2:
         if 'backgroundCor' in listFilters[1]:
             color = 'r'
             name = 'background correction'
@@ -234,7 +243,6 @@ def colorFirstFilter(listFilters):
         color = 'k'
         name = 'no filter'
     return color, name
-
 
 
 main()

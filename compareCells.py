@@ -4,14 +4,18 @@ import os
 import math
 import matplotlib.pyplot as plt
 import mplcursors
-import numpy as np
 
 from matplotlib.patches import Patch
 from matplotlib.lines import Line2D
 
 
 def main():
-    versionList = ['66632', '66633','66634', '190925']
+    '''
+    This function makes use of multiprocessing to show 4 interactive plots at the same time of the 4 versions.
+    :return:
+    '''
+    versionList = ['66632']
+    #, '66633', '66634', '190925']
 
     for version in versionList:
         clearFile = open(
@@ -24,20 +28,26 @@ def main():
 
 
 def callFunc(version):
+    '''
+
+    :param version: This parameter contains the version number and tells the program which dataset to retrieve.
+    :return:
+    '''
     variatie = 4
     includeOutliers = True
 
-    dictPipeline = []
+    listPipeline = []
 
-    path = '/home/bram/Desktop/Jaar_3/donders/report/verslagData/detectedCells/' + version + '(20 < voxelCount < 100)/'
-    #path = '/home/bram/Desktop/Jaar_3/donders/report/verslagData/detectedCells/' + version + '/'
+    #path = '/home/bram/Desktop/Jaar_3/donders/report/verslagData/detectedCells/' + version + '(20 < voxelCount < 100)/'
+    # path = '/home/bram/Desktop/Jaar_3/donders/report/verslagData/detectedCells/' + version + '/'
+    path = '/home/bram/Desktop/Jaar_3/donders/report/verslagData/detectedCells/' + version + 'EnhanceTest/'
 
 
     for filename in os.listdir(path):
         with open(path + filename) as f:
-            listPipeline = list(csv.reader(f))
-            del listPipeline[0]
-        dictPipeline.append([filename, listPipeline])
+            listPipelineTemp = list(csv.reader(f))
+            del listPipelineTemp[0]
+        listPipeline.append([filename, listPipelineTemp])
     # print(dictPipeline)
     with open(
             '/home/bram/Desktop/Jaar_3/donders/report/verslagData/2019-10-29 Data for Bram/csv/S1_' + version + '_Cell_Count_03.csv') as f:
@@ -46,10 +56,23 @@ def callFunc(version):
 
     counted = len(listCounted) + 1
 
-    makeGraph(dictPipeline, counted, version, variatie, listCounted, includeOutliers)
+    makeGraph(listPipeline, counted, version, variatie, listCounted, includeOutliers)
 
 
 def func(key, listCounted, variatie, counted):
+    '''
+
+    :param key: The name of pipeline with all cell locations
+    :param listCounted: The list of manually counted cells
+    :param variatie: The amount of variation in cell locations allowed
+    :param counted: The amount of manually counted cells.
+    :return:
+    This functon returns
+    The data stored locally as listDataTemp
+    The amount of cells counted in the pipelines as X
+    The amount of matches as Y
+
+    '''
     arivis = len(key[1])
     i = 0
     a = 0
@@ -71,7 +94,6 @@ def func(key, listCounted, variatie, counted):
                         break
         a += 1
 
-
     x = arivis
     y = i
     # print(x, y)
@@ -89,12 +111,22 @@ def func(key, listCounted, variatie, counted):
     if versionAndFilter[2:] != []:
         listDataTemp = (versionAndFilter[1], versionAndFilter[2:], arivis, i, str(counted - i), arivis - counted)
     else:
+        print(versionAndFilter)
         listDataTemp = (versionAndFilter[1], 'None', arivis, i, str(counted - i), arivis - counted)
 
-    return listDataTemp, x, y, arivis
+    return listDataTemp, x, y
 
 
-def makeGraph(dictPipeline, counted, version, variatie, listCounted, outliers):
+def makeGraph(listPipeline, counted, version, variatie, listCounted, outliers):
+    '''
+    :param listPipeline: A list containing the name of a pipeline and all found cell coordinates
+    :param counted: The amount of manually counted cells in the version
+    :param version: Which version is being plotted
+    :param variatie: How much variation in the cell locations is allowed
+    :param listCounted: The coordinates of the manually counted cells.
+    :param outliers: A boolean to determine whether to include outliers in the plots.
+    :return:
+    '''
     listX = []
     listY = []
     listLabel = []
@@ -103,9 +135,9 @@ def makeGraph(dictPipeline, counted, version, variatie, listCounted, outliers):
     data = []
     data.append(version)
     data.append(headers)
-    for key in dictPipeline:
-        listDataTemp, x, y, arivis = func(key, listCounted, variatie, counted)
-        #print(listDataTemp)
+    for key in listPipeline:
+        listDataTemp, x, y = func(key, listCounted, variatie, counted)
+        # print(listDataTemp)
         data.append(listDataTemp)
         dist = math.sqrt((x - counted) ** 2 + (y - counted) ** 2)
         if not outliers and dist < 600:
@@ -127,13 +159,16 @@ def makeGraph(dictPipeline, counted, version, variatie, listCounted, outliers):
     listLine2 = [0, max(listY)]
     listLine3 = [0, max(listX)]
     listLine4 = [counted, counted]
-    legend_elements = [Patch(facecolor='b', edgecolor='r', alpha=0.2, label='Not enough matches and not enough cells'),
-                       Patch(facecolor='y', edgecolor='r', alpha=0.2, label='Not enough matches and too many cells'),
-                       Patch(facecolor='cyan', edgecolor='r', alpha=0.2, label='Too many matches and too many cells'),
-                       Patch(facecolor='r', edgecolor='r', alpha=0.2, label='Too many matches and not enough cells'),
-                       Line2D([], [], marker='*', color='k', label='ClearMap', linestyle='None'),
-                       Line2D([], [], marker='o', color='k', label='Machine learning', linestyle='None'),
-                       Line2D([], [], marker='s', color='k', label='Blobfinder', linestyle='None')]
+    legend_elements = [
+        Patch(facecolor='b', edgecolor='r', alpha=0.2, label='Not enough counts but more matches than cells found'),
+        Patch(facecolor='y', edgecolor='r', alpha=0.2, label='Not enough matches and too many cells'),
+        Patch(facecolor='cyan', edgecolor='r', alpha=0.2, label='Not enough counts and less matches than cells found'),
+        Line2D([], [], color='g', label='All found cells match'),
+
+        # Patch(facecolor='r', edgecolor='r', alpha=0.2, label='Too many matches and not enough cells'),
+        Line2D([], [], marker='*', color='w', label='ClearMap', linestyle='None', mec='k'),
+        Line2D([], [], marker='o', color='w', label='Machine learning', linestyle='None', mec='k'),
+        Line2D([], [], marker='s', color='w', label='Blobfinder', linestyle='None', mec='k')]
     fig = plt.figure()
     fig.suptitle('', fontsize=14, fontweight='bold')
 
@@ -146,7 +181,7 @@ def makeGraph(dictPipeline, counted, version, variatie, listCounted, outliers):
 
     point = ax.plot(refpoint, refpoint2, 'go',
                     label='Perfect data\nx = ' + str(refpoint[0]) + '\ny = ' + str(refpoint[0]))
-    ax.plot(listLine, listLine2, 'r--', label='Divide cell count')
+    # ax.plot(listLine, listLine2, 'r--', label='Divide cell count')
     ax.plot(listLine3, listLine4, 'r--', label='Divide matches')
 
     ySizeD = plt.ylim()[0]
@@ -158,10 +193,10 @@ def makeGraph(dictPipeline, counted, version, variatie, listCounted, outliers):
     listCoord1 = [0, refpoint2[0]]
     listCoord2 = listCoord1
     ax.plot(listCoord1, listCoord2, 'g-', label='Perfect matches line')
-    plt.fill([counted, xSizeL, xSizeL, counted], [counted, counted, ySizeD, ySizeD], 'b', alpha=0.2, edgecolor='r')
-    plt.fill([counted, xSizeR, xSizeR, counted], [counted, counted, ySizeU, ySizeU], 'cyan', alpha=0.2, edgecolor='r')
-    plt.fill([counted, xSizeL, xSizeL, counted], [counted, counted, ySizeU, ySizeU], 'r', alpha=0.2, edgecolor='r')
-    plt.fill([counted, xSizeR, xSizeR, counted], [counted, counted, ySizeD, ySizeD], 'y', alpha=0.2, edgecolor='r')
+    plt.fill([counted, 0, 0, counted], [counted, counted, 0, counted], 'b', alpha=0.2, edgecolor='r')
+    plt.fill([counted, counted, 0, counted], [counted, counted, 0, 0], 'cyan', alpha=0.2, edgecolor='r')
+    # plt.fill([counted, xSizeL, xSizeL, counted], [counted, counted, ySizeU, ySizeU], 'r', alpha=0.2, edgecolor='r')
+    plt.fill([counted, xSizeR, xSizeR, counted], [counted, counted, 0, 0], 'y', alpha=0.2, edgecolor='r')
 
     i = 0
     colorList = []
@@ -174,18 +209,19 @@ def makeGraph(dictPipeline, counted, version, variatie, listCounted, outliers):
         total = listX[i]
         if match > total:
             match = total - (match - total)
+
+        if total > counted:
+            total = counted - (total - counted)
+
         try:
-            allList.append([listFilters, dist, match/total,listX[i]])
+            allList.append([listFilters, dist, match / listX[i], total])
         except ZeroDivisionError:
-            allList.append([listFilters, dist, 0,listX[i]])
+            allList.append([listFilters, dist, 0, listX[i]])
 
+        keyWord = 'particle'
 
-        keyWord = 'denoise'
-        #color, name  = colorFilter(listFilters, keyWord)
-        color, name = colorFirstFilter(listFilters)
-
-            
-
+        color, name = colorFilter(listFilters, keyWord)
+        # color, name = colorFirstFilter(listFilters)
 
         if color not in colorList:
             legend_elements.append(Line2D([], [], marker='o', color=color, label=name, linestyle='None'))
@@ -218,10 +254,20 @@ def makeGraph(dictPipeline, counted, version, variatie, listCounted, outliers):
 
 
 def truncate(n):
+    '''
+    This function is used to truncate an integer
+    :param n:
+    :return:
+    '''
     return int(n * 1000) / 1000
 
 
 def makeCSV(data):
+    '''
+    This function is used to store data locally to use in another script.
+    :param data: A list of data
+    :return:
+    '''
     version = data[0]
     del data[0]
     with open('/home/bram/Desktop/Jaar_3/donders/report/celDetectionCsv/' + version + '.csv', 'w+') as file:
@@ -230,12 +276,25 @@ def makeCSV(data):
 
 
 def writeList(allList, version):
+    '''
+    This functions creates a csv file that can be opened in excel to show the results of all scripts.
+    :param allList: The list with all the information
+    :param version: The version number
+    :return:
+    '''
     f = open("/home/bram/Desktop/Jaar_3/donders/report/verslagData/detectedCells/allDistances" + version + ".txt", "a")
 
     f.write(str(allList))
     f.close()
 
-def colorFilter(listFilters,keyWord):
+
+def colorFilter(listFilters, keyWord):
+    '''
+    This function can be called to color the pipelines based on one of the filters
+    :param listFilters: The combinations of filters used
+    :param keyWord: Which filter to base the color in the plot on.
+    :return:
+    '''
     if len(listFilters) > 3:
         if keyWord in listFilters[2] or keyWord in listFilters[3]:
             color = 'b'
@@ -254,8 +313,14 @@ def colorFilter(listFilters,keyWord):
         color = 'k'
         name = 'else'
     return color, name
-def colorFirstFilter(listFilters):
 
+
+def colorFirstFilter(listFilters):
+    '''
+    This functions colors the filters based on the first filter used.
+    :param listFilters: The combinations of filters used
+    :return:
+    '''
     if len(listFilters) > 2:
         if 'backgroundCor' in listFilters[2]:
             color = 'r'
@@ -279,4 +344,6 @@ def colorFirstFilter(listFilters):
         color = 'k'
         name = 'no filter'
     return color, name
+
+
 main()
