@@ -91,7 +91,7 @@ def percentageToCount(totalList):
         # Patch(facecolor='cyan', edgecolor='r', alpha=0.2, label=''),
         # Patch(facecolor='r', edgecolor='r', alpha=0.2, label=''),
         Line2D([], [], marker='*', color='w', label='ClearMap', linestyle='None', mec='k'),
-        Line2D([], [], marker='o', color='w', label='Machine learning', linestyle='None', mec='k'),
+        #Line2D([], [], marker='o', color='w', label='Machine learning', linestyle='None', mec='k'),
         Line2D([], [], marker='s', color='w', label='Blobfinder', linestyle='None', mec='k')]
 
     point = ax.plot(100, 100, 'go', label='Perfect data\nx = ' + str(100) + '\ny = ' + str(100))
@@ -101,11 +101,11 @@ def percentageToCount(totalList):
 
     for z in listX:
         filter = ast.literal_eval(listFilters[i])
-
+        print(filter)
         keyWord = 'particle'
-        color, name = colorFilter(filter, keyWord)
+        #color, name = colorFilter(filter, keyWord)
 
-        # color, name = colorFirstFilter(filter)
+        color, name = colorFirstFilter(filter)
 
         if color not in colorList:
             legend_elements.append(Line2D([], [], marker='o', color=color, label=name, linestyle='None'))
@@ -149,9 +149,12 @@ def makeGraph(totalList):
     allCombinations = []
     sdList = []
     combinationValues = []
+    listFilters = []
     totalList.sort(key=sortSecond)
 
     for value in totalList:
+        listFilters.append(value[0])
+
         allCombinations.append(value[0].replace("'", "").replace('[', '').replace(']', ''))
         combinationValues.append(value[1])
         allCombinationsList.append(ast.literal_eval(value[0]))
@@ -160,11 +163,20 @@ def makeGraph(totalList):
 
     y_pos = np.arange(len(objects))
     performance = combinationValues
-    legend_elements = [Patch(facecolor='b', alpha=0.5, label='Machine Learning'),
-                       Patch(facecolor='r', alpha=0.5, label='Blob finder'),
-                       Patch(facecolor='k', alpha=0.5, label='ClearMap'), ]
+    legend_elements = [Line2D([], [], marker='o', color='black', label='ClearMap', linestyle='None')]
     i = 0
+    colorList = []
     for item in allCombinationsList:
+
+        filter = ast.literal_eval(listFilters[i])
+
+        color, name = colorFirstFilter(filter)
+
+
+        if color not in colorList:
+            legend_elements.append(Line2D([], [], marker='o', color=color, label=name, linestyle='None'))
+        colorList.append(color)
+
         if item[0] == 'machineLearn':
 
             plt.barh(y_pos[i], performance[i], align='center', alpha=0.5, color='blue', xerr=sdList[i])
@@ -172,7 +184,7 @@ def makeGraph(totalList):
             plt.barh(y_pos[i], performance[i], align='center', alpha=0.5, color='black', xerr=sdList[i])
 
         else:
-            plt.barh(y_pos[i], performance[i], align='center', alpha=0.5, color='red', xerr=sdList[i])
+            plt.barh(y_pos[i], performance[i], align='center', alpha=0.5, color=color, xerr=sdList[i])
 
         i += 1
 
@@ -181,8 +193,8 @@ def makeGraph(totalList):
     plt.title('Distance to the perfect score in all datasets combined with standard deviation')
     for i, v in enumerate(combinationValues):
         plt.text(v + sdList[i], i - .4, str(v), color='black', fontsize=8)
-    plt.subplots_adjust(left=0.3, right=0.9, top=0.9, bottom=0.2)
-    plt.legend(loc='lower center', bbox_to_anchor=(0.5, - 0.25), handles=legend_elements)
+    plt.subplots_adjust(left=0.2, right=0.8, top=0.9, bottom=0.2)
+    plt.legend(loc='center left', bbox_to_anchor=(1, 0.5), handles=legend_elements)
 
     plt.show()
 
@@ -220,7 +232,7 @@ def colorFirstFilter(listFilters):
     :param listFilters: A list of filters used in the pipelines.
     :return:
     '''
-    if len(listFilters) > 2:
+    if len(listFilters) > 1:
         if 'backgroundCor' in listFilters[1]:
             color = 'r'
             name = 'background correction'

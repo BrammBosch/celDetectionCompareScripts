@@ -14,8 +14,7 @@ def main():
     This function makes use of multiprocessing to show 4 interactive plots at the same time of the 4 versions.
     :return:
     '''
-    versionList = ['66632']
-    #, '66633', '66634', '190925']
+    versionList = ['66632', '66633', '66634', '190925']
 
     for version in versionList:
         clearFile = open(
@@ -34,14 +33,15 @@ def callFunc(version):
     :return:
     '''
     variatie = 4
-    includeOutliers = True
+    includeOutliers = False
 
     listPipeline = []
 
-    #path = '/home/bram/Desktop/Jaar_3/donders/report/verslagData/detectedCells/' + version + '(20 < voxelCount < 100)/'
-    # path = '/home/bram/Desktop/Jaar_3/donders/report/verslagData/detectedCells/' + version + '/'
-    path = '/home/bram/Desktop/Jaar_3/donders/report/verslagData/detectedCells/' + version + 'EnhanceTest/'
+    testWord = 'Denoise'
 
+    path = '/home/bram/Desktop/Jaar_3/donders/report/verslagData/detectedCells/v2/' + version + 'All/'
+    # path = '/home/bram/Desktop/Jaar_3/donders/report/verslagData/detectedCells/' + version + '/'
+    # path = '/home/bram/Desktop/Jaar_3/donders/report/verslagData/detectedCells/v2/' + version + testWord + '/'
 
     for filename in os.listdir(path):
         with open(path + filename) as f:
@@ -81,7 +81,7 @@ def func(key, listCounted, variatie, counted):
 
         # print(listCounted[a])
         for pipelineCoord in key[1]:
-            # print(coord[0] + ' ' + pipelineCoord[0] + '-' + coord[1] + ' ' + pipelineCoord[1])
+            #print(coord[0] + ' ' + pipelineCoord[0] + '-' + coord[1] + ' ' + pipelineCoord[1])
             if float(coord[0]) - variatie <= float(pipelineCoord[0]) <= float(coord[0]) + variatie:
                 # print('y ' + coord[0] + ' ' + pipelineCoord[0])
                 if float(coord[1]) - variatie <= float(pipelineCoord[1]) <= float(coord[1]) + variatie:
@@ -167,7 +167,7 @@ def makeGraph(listPipeline, counted, version, variatie, listCounted, outliers):
 
         # Patch(facecolor='r', edgecolor='r', alpha=0.2, label='Too many matches and not enough cells'),
         Line2D([], [], marker='*', color='w', label='ClearMap', linestyle='None', mec='k'),
-        Line2D([], [], marker='o', color='w', label='Machine learning', linestyle='None', mec='k'),
+        #Line2D([], [], marker='o', color='w', label='Machine learning', linestyle='None', mec='k'),
         Line2D([], [], marker='s', color='w', label='Blobfinder', linestyle='None', mec='k')]
     fig = plt.figure()
     fig.suptitle('', fontsize=14, fontweight='bold')
@@ -220,8 +220,8 @@ def makeGraph(listPipeline, counted, version, variatie, listCounted, outliers):
 
         keyWord = 'particle'
 
-        color, name = colorFilter(listFilters, keyWord)
-        # color, name = colorFirstFilter(listFilters)
+        # color, name = colorFilter(listFilters, keyWord)
+        color, name = colorFirstFilter(listFilters)
 
         if color not in colorList:
             legend_elements.append(Line2D([], [], marker='o', color=color, label=name, linestyle='None'))
