@@ -30,6 +30,7 @@ def main():
             data190925 = x
 
     totalList = []
+    totalList2 = []
     totalListSmall = []
     for filter in data66632:
         for filter2 in data66633:
@@ -39,19 +40,37 @@ def main():
 
                         averagePercentage = (filter[2] + filter2[2] + filter3[2] + filter4[2]) / 4
                         totalPercentage = (filter[3] + filter2[3] + filter3[3] + filter4[3]) / 657
+                        averageFN = ((filter[4] + filter2[4] + filter3[4] + filter4[4])/4)
+                        averageFP = ((filter[5] + filter2[5] + filter3[5] + filter4[5])/4)
+
+                        print(filter[0][1:])
+                        print(filter[4])
+                        print(filter2[4])
+                        print(filter3[4])
+                        print(filter4[4])
+                        print('average false negatives ' + str(averageFN))
+                        print(filter[5])
+                        print(filter2[5])
+                        print(filter3[5])
+                        print(filter4[5])
+                        print('average false positives ' + str(averageFP) + '\n\n')
+
 
                         sample = [int(filter[1]), int(filter2[1]), int(filter3[1]), int(filter4[1])]
 
-                        totalList.append([str(filter[0][1:]), int(filter[1] + filter2[1] + filter3[1] + filter4[1]),
-                                          statistics.stdev(sample), averagePercentage, totalPercentage])
+                        totalList.append([str(filter[0][1:]), int(filter[1] + filter2[1] + filter3[1] + filter4[1]),statistics.stdev(sample), averagePercentage, totalPercentage])
+                        totalList2.append([str(filter[0][1:]), int(filter[1] + filter2[1] + filter3[1] + filter4[1]),statistics.stdev(sample), averageFN, averageFP])
+
+
+
                         if int(filter[1] + filter2[1] + filter3[1] + filter4[1]) < 1000:
                             totalListSmall.append(
                                 [str(filter[0][1:]), int(filter[1] + filter2[1] + filter3[1] + filter4[1]),
                                  statistics.stdev(sample)])
 
     makeGraph(totalList)
-    percentageToCount(totalList)
-
+    #percentageToCount(totalList)
+    FNFPPlot(totalList2)
 
 def sortSecond(val):
     '''
@@ -61,6 +80,83 @@ def sortSecond(val):
     '''
     return val[1]
 
+def FNFPPlot(totalList):
+    '''
+    This function creates a scatterplot where the percentage of correct counts is compared against the percentage of
+    cells found.
+    :param totalList: a list containing all values for the datasets.
+    :return:
+    '''
+    fig = plt.figure()
+    fig.suptitle('', fontsize=14, fontweight='bold')
+
+    ax = fig.add_subplot()
+    ax.set_title('Average amount of false negatives and false positives in 4 datasets')
+    ax.set_xlabel('Average percentage false positives')
+    ax.set_ylabel('Average percentage false negative')
+    listX = []
+    listY = []
+    listFilters = []
+    for item in totalList:
+        #*100
+        listY.append(item[3])
+        listX.append(item[4])
+        listFilters.append(item[0])
+
+    box = ax.get_position()
+    ax.set_position([box.x0, box.y0, box.width * 0.8, box.height])
+    legend_elements = [  # Patch(facecolor='b', edgecolor='r', alpha=0.2, label='Not all cells were found'),
+        # Patch(facecolor='y', edgecolor='r', alpha=0.2, label='More cells are detected than are present in the dataset'),
+        # Patch(facecolor='cyan', edgecolor='r', alpha=0.2, label=''),
+        # Patch(facecolor='r', edgecolor='r', alpha=0.2, label=''),
+        Line2D([], [], marker='*', color='w', label='ClearMap', linestyle='None', mec='k'),
+        #Line2D([], [], marker='o', color='w', label='Machine learning', linestyle='None', mec='k'),
+        Line2D([], [], marker='s', color='w', label='Blobfinder', linestyle='None', mec='k')]
+
+    point = ax.plot(0, 0, 'go', label='Perfect data\nx = ' + str(100) + '\ny = ' + str(100))
+
+    i = 0
+    colorList = []
+
+    for z in listX:
+        filter = ast.literal_eval(listFilters[i])
+        #print(filter)
+        keyWord = 'particle'
+        #color, name = colorFilter(filter, keyWord)
+
+        color, name = colorFirstFilter(filter)
+
+        if color not in colorList:
+            legend_elements.append(Line2D([], [], marker='o', color=color, label=name, linestyle='None'))
+        colorList.append(color)
+
+        if 'machineLearn' in filter[0]:
+            point += ax.plot(listX[i], listY[i], 'o' + color,
+                             label=totalList[i][0] + '\nFalse negatives = ' + str(
+                                 "{:.1f}".format(listY[i])) + '%\nFalse positives = ' + str(
+                                 "{:.1f}".format(listX[i])) + '%')
+        elif 'blobFinder' in filter[0]:
+            point += ax.plot(listX[i], listY[i], 's' + color,
+                             label=totalList[i][0] + '\nFalse negatives = ' + str(
+                                 "{:.1f}".format(listY[i])) + '%\nFalse positives = ' + str(
+                                 "{:.1f}".format(listX[i])) + '%')
+        else:
+            point += ax.plot(listX[i], listY[i], '*' + color,
+                             label=totalList[i][0] + '\nFalse negatives = ' + str(
+                                 "{:.1f}".format(listY[i])) + '%\nFalse positives = ' + str(
+                                 "{:.1f}".format(listX[i])) + '%')
+        i += 1
+
+    ax.plot([0, 100], [0, 0], 'g--', label='Divide matches')
+    ax.plot([0, 0], [100, 0], 'g--', label='Divide matches')
+
+    mplcursors.cursor(point, hover=True).connect("add", lambda sel: sel.annotation.set_text(sel.artist.get_label()))
+
+    ax.legend(loc='center left', bbox_to_anchor=(1, 0.5), handles=legend_elements)
+    #ax.set_ylim(ymin=-1)
+    plt.gca().invert_xaxis()
+    plt.gca().invert_yaxis()
+    plt.show()
 
 def percentageToCount(totalList):
     '''
@@ -80,8 +176,9 @@ def percentageToCount(totalList):
     listY = []
     listFilters = []
     for item in totalList:
-        listY.append(item[3] * 100)
-        listX.append(item[4] * 100)
+
+        listY.append(item[3]*100)
+        listX.append(item[4]*100)
         listFilters.append(item[0])
 
     box = ax.get_position()
@@ -101,7 +198,7 @@ def percentageToCount(totalList):
 
     for z in listX:
         filter = ast.literal_eval(listFilters[i])
-        print(filter)
+        #print(filter)
         keyWord = 'particle'
         #color, name = colorFilter(filter, keyWord)
 
@@ -134,7 +231,7 @@ def percentageToCount(totalList):
     mplcursors.cursor(point, hover=True).connect("add", lambda sel: sel.annotation.set_text(sel.artist.get_label()))
 
     ax.legend(loc='center left', bbox_to_anchor=(1, 0.5), handles=legend_elements)
-    ax.set_ylim(ymin=0)
+    #ax.set_ylim(ymin=-1)
     plt.show()
 
 
@@ -163,7 +260,8 @@ def makeGraph(totalList):
 
     y_pos = np.arange(len(objects))
     performance = combinationValues
-    legend_elements = [Line2D([], [], marker='o', color='black', label='ClearMap', linestyle='None')]
+    legend_elements = []
+        #Line2D([], [], marker='o', color='black', label='ClearMap', linestyle='None')]
     i = 0
     colorList = []
     for item in allCombinationsList:
@@ -211,17 +309,17 @@ def colorFilter(listFilters, keyWord):
             color = 'b'
             name = keyWord
         else:
-            color = 'k'
+            color = 'orange'
             name = 'else'
     elif len(listFilters) > 1:
         if keyWord in listFilters[1]:
             color = 'b'
             name = keyWord
         else:
-            color = 'k'
+            color = 'orange'
             name = 'else'
     else:
-        color = 'k'
+        color = 'orange'
         name = 'else'
     return color, name
 
@@ -250,9 +348,9 @@ def colorFirstFilter(listFilters):
             name = 'morphology filter'
         else:
             color = 'k'
-            name = 'no filter'
+            name = 'ClearMap'
     else:
-        color = 'k'
+        color = 'y'
         name = 'no filter'
     return color, name
 

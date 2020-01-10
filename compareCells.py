@@ -48,7 +48,7 @@ def callFunc(version):
             listPipelineTemp = list(csv.reader(f))
             del listPipelineTemp[0]
         listPipeline.append([filename, listPipelineTemp])
-    # print(dictPipeline)
+
     with open(
             '/home/bram/Desktop/Jaar_3/donders/report/verslagData/2019-10-29 Data for Bram/csv/S1_' + version + '_Cell_Count_03.csv') as f:
         listCounted = list(csv.reader(f))
@@ -96,8 +96,29 @@ def func(key, listCounted, variatie, counted):
 
     x = arivis
     y = i
-    # print(x, y)
-    # print('\n\n' + key[0])
+
+
+    print('\n\n' + key[0])
+    print('manually counted ' + str(counted))
+    print('matches ' + str(i))
+    print('counts in arivis ' + str(arivis))
+    if i != 0:
+        fn = (((counted-i)/counted)*100)
+        if i > arivis:
+            fp = (((i-arivis)/i) * 100)
+        else:
+            fp = (((arivis-i)/arivis) * 100)
+
+        print('False negative ' + str(fn))
+        print('false positives ' + str(fp))
+
+
+    else:
+        fn= 100
+        fp = 0
+        #print('0')
+
+
     # print('Manual counts: ' + str(counted))
     # print('pipeline counts: ' + str(arivis))
     # print('Matches: ' + str(i))
@@ -111,10 +132,10 @@ def func(key, listCounted, variatie, counted):
     if versionAndFilter[2:] != []:
         listDataTemp = (versionAndFilter[1], versionAndFilter[2:], arivis, i, str(counted - i), arivis - counted)
     else:
-        print(versionAndFilter)
+        #print(versionAndFilter)
         listDataTemp = (versionAndFilter[1], 'None', arivis, i, str(counted - i), arivis - counted)
 
-    return listDataTemp, x, y
+    return listDataTemp, x, y, fn, fp
 
 
 def makeGraph(listPipeline, counted, version, variatie, listCounted, outliers):
@@ -130,13 +151,18 @@ def makeGraph(listPipeline, counted, version, variatie, listCounted, outliers):
     listX = []
     listY = []
     listLabel = []
+    listFN = []
+    listFP = []
     headers = ['Cell Finder', 'Image processing applied', 'Cells found', 'Matches',
                'Cells  not corresponding to manually found cells', 'Cells too many']
     data = []
     data.append(version)
     data.append(headers)
+
+
     for key in listPipeline:
-        listDataTemp, x, y = func(key, listCounted, variatie, counted)
+        listDataTemp, x, y, fn, fp = func(key, listCounted, variatie, counted)
+
         # print(listDataTemp)
         data.append(listDataTemp)
         dist = math.sqrt((x - counted) ** 2 + (y - counted) ** 2)
@@ -145,13 +171,16 @@ def makeGraph(listPipeline, counted, version, variatie, listCounted, outliers):
             listY.append(y)
             key[0] = key[0].replace('_', ' ').replace('.csv', '')
             listLabel.append(key[0])
+            listFN.append(fn)
+            listFP.append(fp)
 
         elif outliers:
             listX.append(x)
             listY.append(y)
             key[0] = key[0].replace('_', ' ').replace('.csv', '')
             listLabel.append(key[0])
-
+            listFN.append(fn)
+            listFP.append(fp)
     makeCSV(data)
     refpoint = [counted]
     refpoint2 = refpoint
@@ -214,9 +243,11 @@ def makeGraph(listPipeline, counted, version, variatie, listCounted, outliers):
             total = counted - (total - counted)
 
         try:
-            allList.append([listFilters, dist, match / listX[i], total])
+
+
+            allList.append([listFilters, dist, match / listX[i], total,listFN[i],listFP[i]])
         except ZeroDivisionError:
-            allList.append([listFilters, dist, 0, listX[i]])
+            allList.append([listFilters, dist, 0, listX[i],listFN[i],listFP[i]])
 
         keyWord = 'particle'
 
@@ -264,25 +295,27 @@ def truncate(n):
 
 def makeCSV(data):
     '''
-    This function is used to store data locally to use in another script.
-    :param data: A list of data
+    This functions creates a csv file that can be opened in excel to show the results of all scripts.
+    :param data: The list with all the information
+    :param version: The version number
     :return:
     '''
     version = data[0]
     del data[0]
-    with open('/home/bram/Desktop/Jaar_3/donders/report/celDetectionCsv/' + version + '.csv', 'w+') as file:
+    with open('/home/bram/Desktop/Jaar_3/donders/report/celDetectionCsv/' + version + '.txt', 'w+') as file:
         writer = csv.writer(file)
         writer.writerows(data)
 
 
 def writeList(allList, version):
     '''
-    This functions creates a csv file that can be opened in excel to show the results of all scripts.
-    :param allList: The list with all the information
-    :param version: The version number
+
+     This function is used to store data locally to use in another script.
+    :param allList: A list of data
     :return:
     '''
     f = open("/home/bram/Desktop/Jaar_3/donders/report/verslagData/detectedCells/allDistances" + version + ".txt", "a")
+
 
     f.write(str(allList))
     f.close()
